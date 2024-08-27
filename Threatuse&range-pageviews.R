@@ -212,10 +212,6 @@ data_fit_zh$ThreatStatus <- fct_relevel(data_fit_zh$ThreatStatus, "Non-threatene
                         data_fit_zh, family = poisson(), na.action = na.fail))
 
 summary(model_range_ar)
-testOverdispersion(model_range_en)
-par(mfrow = c(2,2))
-simulateResiduals(fittedModel = model_en, plot = T)
-
 
 # # Function to generate prediction plots for a given model
 # range_prediction_plot <- function(model) {
@@ -284,6 +280,57 @@ summary(model_range_en)
 
 # saveRDS(model_range_en, "Quasimodel_en.rds")
 
+# Function to create a Q-Q plot for a given model
+qq_plot <- function(model, title) {
+  qq <- ggplot(data = data.frame(sample = residuals(model, type = "deviance")), aes(sample = sample)) +
+    stat_qq() +
+    stat_qq_line() +
+    ggtitle(title) +
+    theme_ggdist(base_size = 45)
+  
+  return(qq)
+}
+
+# Create Q-Q plots for all models
+plots <- list(
+  qq_plot(model_range_ar, "Arabic"),
+  qq_plot(model_range_de, "German"),
+  qq_plot(model_range_en, "English"),
+  qq_plot(model_range_es, "Spanish"),
+  qq_plot(model_range_fr, "French"),
+  qq_plot(model_range_it, "Italian"),
+  qq_plot(model_range_ja, "Japanese"),
+  qq_plot(model_range_pt, "Portuguese"),
+  qq_plot(model_range_ru, "Russian"),
+  qq_plot(model_range_zh, "Chinese")
+)
+
+# Combine the Q-Q plots into a single figure
+combined_plot <- plot_grid(plotlist = plots, ncol = 2)
+
+# Create a title
+title <- ggdraw() + 
+  draw_label(
+    "Q-Q plots for Poisson GLMs by language", 
+    fontface = 'bold', 
+    size = 50, 
+    x = 0.5, 
+    hjust = 0.5
+  )
+# Combine the title and the combined plot
+(final_plot <- plot_grid(
+  title, 
+  combined_plot, 
+  ncol = 1,  # Stack them vertically
+  rel_heights = c(0.1, 1)  # Adjust relative heights: title takes 10% of the height
+))
+
+# Checking over-dispersion
+testOverdispersion(model_range_en)
+par(mfrow = c(2,2))
+simulateResiduals(fittedModel = model_en, plot = T)
+
+# Performing model selection
 # Define the custom family function
 x.quasipoisson <- function(...) {
   res <- quasipoisson(...)
