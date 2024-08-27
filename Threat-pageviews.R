@@ -417,6 +417,113 @@ ggplot(th_views_allsp_long_df, aes(y = ThreatStatus, x = PageViews, group = Lang
     byrow = TRUE # Arrange legend items by row
   ))
 
+#-----##Part8: Creating table for top 10 languages------
+# Reading df
+th_views_allsp_df <- read.csv("WCVP_views_threatstatus.csv")
+
+# Reshaping data into long format
+th_views_allsp_long_df <- th_views_allsp_df %>%
+  pivot_longer(
+    cols = starts_with("totalviews_"),
+    names_to = "Language",
+    names_prefix = "totalviews_",
+    values_to = "PageViews"
+  ) %>%
+  mutate(Language = factor(Language, levels = c("ar", "de", "es", "en", "fr", "it", 
+                                                "ja", "pt", "ru", "zh")))
+
+# Defining language mapping
+language_names <- c(ar = "Arabic", de = "German", es = "Spanish", en = "English",
+                    fr = "French", it = "Italian", ja = "Japanese", pt = "Portuguese",
+                    ru = "Russian", zh = "Chinese")
+
+# Changing language name to full
+th_views_allsp_long_df <- th_views_allsp_long_df %>%
+  mutate(LanguageFull = language_names[Language])
+
+# Getting df for top 10 highest views sp in 10 languages
+top10sp_df <- th_views_allsp_long_df %>%
+  group_by(LanguageFull) %>%
+  arrange(desc(PageViews)) %>%
+  slice_max(order_by = PageViews, n = 10) %>%
+  ungroup()
+
+# Filter and rename the columns
+top10sp_filtered_df <- top10sp_df %>%
+  select(
+    "Rank" = Rank,  
+    "Species" = scientificName,  
+    "ThreatStatus" = ThreatStatus,  
+    "Views" = PageViews,  
+    "Language" = LanguageFull  
+  )
+
+# Saving df
+write.csv(top10sp_filtered_df, "Top 10 species all lang.csv", row.names = F)
+# reading df for table
+top10sp_filtered_df <- read.csv("Top 10 species all lang.csv")
+
+# Pivot the data so that languages become columns
+pivoted_df <- top10sp_filtered_df %>%
+  select(Rank, Species, Language) %>% 
+  pivot_wider(names_from = Language, values_from = Species) %>%
+  arrange(Rank)  # Ensure the data is sorted by Rank
+
+# Create the gt table with customized lines
+(pivoted_table <- pivoted_df %>%
+    gt() %>%
+    tab_header(
+      title = "Top 10 species by page views",
+      subtitle = "Rank-wise species listed by language Wikipedia"
+    ) %>%
+    cols_label(
+      Rank = "Rank"
+      # The rest of the columns are the languages, already labeled
+    ) %>%
+    tab_options(
+      table.border.top.color = "black",            # Darken the top border of the table
+      table.border.bottom.color = "black",         # Darken the bottom border of the table
+      heading.border.bottom.color = "black",       # Darken the border under the headings
+      table_body.hlines.color = "white"            # Remove horizontal lines between rows
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "bottom",
+        color = "black",
+        weight = px(2)                             # Make the heading bottom line thicker
+      ),
+      locations = cells_column_labels(everything())
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "bottom",
+        color = "black",
+        weight = px(2)                             # Make the last row bottom line thicker
+      ),
+      locations = cells_body(
+        rows = nrow(pivoted_df)                    # Apply to the last row of the table
+      )
+    ) %>%
+    # Italicize the species names
+    tab_style(
+      style = cell_text(
+        style = "italic"                           # Italicize text
+      ),
+      locations = cells_body(
+        columns = everything(),                    # Apply to all columns (you may specify certain columns if needed)
+        rows = TRUE                                # Apply to all rows
+      )
+    ) %>%
+    # Bold the column headings
+    tab_style(
+      style = cell_text(
+        weight = "bold"                            # Bold text
+      ),
+      locations = cells_column_labels(
+        everything()                               # Apply to all column labels
+      )
+    )
+)
 
 #-----------xxxxx---------------
 
